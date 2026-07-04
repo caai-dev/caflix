@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAflix - Stay Focused, Pass Exam</title>
+    <!-- Modern Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-container">
+            <h1 class="logo">CA<span>flix</span></h1>
+            <p class="tagline">Premium CA Study Library</p>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <!-- Left Section: Player & Metadata -->
+        <section class="player-section">
+            <div class="player-wrapper">
+                <div class="iframe-container">
+                    <iframe id="video-player" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                    <!-- Fallback placeholder display when ID is PLACEHOLDER -->
+                    <div id="player-placeholder-overlay" class="player-placeholder-overlay">
+                        <div class="placeholder-content">
+                            <svg class="placeholder-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M8 5.14v14c0 .86.94 1.39 1.66.9l10-7c.61-.43.61-1.37 0-1.8l-10-7a1 1 0 0 0-1.66.9z"/>
+                            </svg>
+                            <h3>Placeholder Mode</h3>
+                            <p>To watch this video, replace the <code>"PLACEHOLDER"</code> ID in <code>app.js</code> with a real YouTube Video ID.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="video-info">
+                <h2 id="active-video-title">Select a video to start studying</h2>
+                <div class="video-meta">
+                    <span id="active-video-paper" class="meta-badge paper-badge">Paper</span>
+                    <span id="active-video-chapter" class="meta-badge chapter-badge">Chapter</span>
+                </div>
+                
+                <!-- YouTube CTA buttons -->
+                <div class="engagement-panel">
+                    <p class="cta-label">Support on YouTube:</p>
+                    <div class="cta-buttons">
+                        <a id="cta-like" href="#" target="_blank" class="cta-btn btn-like">
+                            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
+                            Like
+                        </a>
+                        <a id="cta-comment" href="#" target="_blank" class="cta-btn btn-comment">
+                            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+                            Comment
+                        </a>
+                        <a id="cta-subscribe" href="#" target="_blank" class="cta-btn btn-subscribe">
+                            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s-2.005-7-11-7S1 12 1 12s2.005 7 11 7 11-7 11-7zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                            Subscribe
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Section: Search & Feed -->
+        <section class="feed-section">
+            <div class="search-container">
+                <div class="search-wrapper">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="search-input" placeholder="Search by paper, chapter, or video..." autocomplete="off">
+                </div>
+            </div>
+
+            <!-- Feed content -->
+            <div id="video-feed" class="video-feed">
+                <!-- Grouped papers & chapters will be rendered here dynamically -->
+            </div>
+
+            <!-- Empty search state -->
+            <div id="empty-state" class="empty-state hidden">
+                <div class="empty-content">
+                    <svg class="empty-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <p class="empty-text">Not on CAflix — stay focused.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>&copy; 2026 CAflix. Stay focused, work hard, crack the exam.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+# .github/workflows/daily-catcher.yml
+name: CAflix Auto-Catcher Sync
+
+on:
+  schedule:
+    # Runs 3x daily at 00:30 UTC, 08:30 UTC, and 16:30 UTC 
+    # (which matches approx 6:00 AM, 2:00 PM, and 10:00 PM IST)
+    - cron: '30 0,8,16 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI
+
+jobs:
+  sync-videos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run Auto-Catcher Script
+        run: node scripts/catcher.js
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}

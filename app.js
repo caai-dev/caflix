@@ -1,65 +1,20 @@
 /* CAflix - Application Logic */
 
-// Hardcoded array of videos as per specifications.
-// Leaving ID as "PLACEHOLDER" - user can replace with actual YouTube Video IDs.
-const VIDEOS = [
-    {
-        id: "PLACEHOLDER",
-        title: "Ind AS 115 - Revenue from Contracts with Customers Overview",
-        paper: "Paper 1: Financial Reporting",
-        chapter: "Chapter 1: Ind AS 115"
-    },
-    {
-        id: "PLACEHOLDER",
-        title: "Step 5: Satisfaction of Performance Obligations",
-        paper: "Paper 1: Financial Reporting",
-        chapter: "Chapter 1: Ind AS 115"
-    },
-    {
-        id: "PLACEHOLDER",
-        title: "Ind AS 16 - Revaluation Model vs Cost Model",
-        paper: "Paper 1: Financial Reporting",
-        chapter: "Chapter 2: Ind AS 16"
-    },
-    {
-        id: "PLACEHOLDER",
-        title: "Professional Ethics - Clause 1 to 4 of First Schedule",
-        paper: "Paper 3: Advanced Auditing and Professional Ethics",
-        chapter: "Chapter 1: Professional Ethics"
-    },
-    {
-        id: "PLACEHOLDER",
-        title: "Second Schedule Overview & Case Studies",
-        paper: "Paper 3: Advanced Auditing and Professional Ethics",
-        chapter: "Chapter 1: Professional Ethics"
-    },
-    {
-        id: "PLACEHOLDER",
-        title: "SA 315 - Identifying and Assessing Risk of Material Misstatement",
-        paper: "Paper 3: Advanced Auditing and Professional Ethics",
-        chapter: "Chapter 2: Audit Planning & Risk Assessment"
-    },
-    {
-        id: "PLACEHOLDER",
-        title: "Theory of Constraints (TOC) Concepts & Equations",
-        paper: "Paper 5: Strategic Cost Management and Performance Evaluation",
-        chapter: "Chapter 1: Modern Business Environment"
-    },
-    {
-        id: "PLACEHOLDER",
-        title: "Throughput Accounting Case Study Analysis",
-        paper: "Paper 5: Strategic Cost Management and Performance Evaluation",
-        chapter: "Chapter 1: Modern Business Environment"
-    }
-];
-
-// Initialize list with unique UIDs to handle identical IDs (e.g. "PLACEHOLDER")
-const VIDEOS_WITH_UID = VIDEOS.map((video, index) => ({
-    ...video,
-    uid: `video-id-ref-${index}`
-}));
-
+let globalVideos = [];
 let activeVideo = null;
+
+function extractVideoId(input) {
+    if (typeof input !== 'string') return null;
+    const cleanInput = input.trim();
+    // 1. Bare valid 11-character video ID check
+    if (/^[a-zA-Z0-9_-]{11}$/.test(cleanInput)) {
+        return cleanInput;
+    }
+    // 2. YouTube URL patterns
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|live\/|shorts\/)([^#\&\?]*).*/;
+    const match = cleanInput.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+}
 
 /**
  * Group flat video list by Paper and then by Chapter, preserving list order.
@@ -98,14 +53,15 @@ function selectVideo(video) {
     const iframe = document.getElementById('video-player');
     const iframeContainer = iframe.parentElement;
     
-    // Check if ID is PLACEHOLDER
-    if (!video.id || video.id === 'PLACEHOLDER') {
+    // Check if ID is PLACEHOLDER or empty
+    const vId = extractVideoId(video.video_id);
+    if (!vId || vId === 'PLACEHOLDER') {
         iframeContainer.classList.add('is-placeholder');
         iframe.src = ''; // Avoid loading broken Youtube URLs
     } else {
         iframeContainer.classList.remove('is-placeholder');
         // rel=0 is MANDATORY to restrict related videos to the same channel
-        iframe.src = `https://www.youtube.com/embed/${video.id}?rel=0&modestbranding=1`;
+        iframe.src = `https://www.youtube.com/embed/${vId}?rel=0&modestbranding=1`;
     }
     
     // Update text labels
@@ -114,14 +70,14 @@ function selectVideo(video) {
     document.getElementById('active-video-chapter').textContent = video.chapter;
     
     // Update external links to YouTube watch page in new tab
-    const watchUrl = `https://www.youtube.com/watch?v=${video.id || 'PLACEHOLDER'}`;
+    const watchUrl = `https://www.youtube.com/watch?v=${vId || 'PLACEHOLDER'}`;
     document.getElementById('cta-like').href = watchUrl;
     document.getElementById('cta-comment').href = watchUrl;
     document.getElementById('cta-subscribe').href = watchUrl;
     
     // Update active highlight classes on cards
     document.querySelectorAll('.video-card').forEach(card => {
-        if (card.dataset.uid === video.uid) {
+        if (card.dataset.id === video.id) {
             card.classList.add('active');
         } else {
             card.classList.remove('active');
@@ -173,16 +129,16 @@ function renderFeed(filteredList) {
             chapter.videos.forEach((video) => {
                 const card = document.createElement('div');
                 card.className = 'video-card';
-                card.dataset.uid = video.uid;
+                card.dataset.id = video.id;
                 
-                if (activeVideo && activeVideo.uid === video.uid) {
+                if (activeVideo && activeVideo.id === video.id) {
                     card.classList.add('active');
                 }
                 
                 // Assemble card contents. Uses onerror fallback to display custom SVG thumbnail.
                 card.innerHTML = `
                     <div class="video-thumb-container">
-                        <img class="video-thumb" src="https://img.youtube.com/vi/${video.id}/hqdefault.jpg" alt="${video.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                        <img class="video-thumb" src="https://img.youtube.com/vi/${video.video_id}/hqdefault.jpg" alt="${video.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
                         <div class="thumb-fallback" style="display: none;">
                             <span>CA</span>
                         </div>
@@ -210,7 +166,7 @@ function renderFeed(filteredList) {
 function handleSearch(event) {
     const query = event.target.value.toLowerCase().trim();
     
-    const filtered = VIDEOS_WITH_UID.filter((video) => {
+    const filtered = globalVideos.filter((video) => {
         return (
             video.title.toLowerCase().includes(query) ||
             video.paper.toLowerCase().includes(query) ||
@@ -221,15 +177,81 @@ function handleSearch(event) {
     renderFeed(filtered);
 }
 
-// App bootstrapping
-document.addEventListener('DOMContentLoaded', () => {
-    // Select first video by default on launch
-    if (VIDEOS_WITH_UID.length > 0) {
-        selectVideo(VIDEOS_WITH_UID[0]);
-    }
+// ==========================================
+// SHARE MODAL OPERATIONS
+// ==========================================
+function openShareModal() {
+    if (!activeVideo) return;
     
-    // Render full feed
-    renderFeed(VIDEOS_WITH_UID);
+    const vId = extractVideoId(activeVideo.video_id) || 'PLACEHOLDER';
+    const shareUrl = `https://www.youtube.com/watch?v=${vId}`;
+    
+    document.getElementById('share-url-input').value = shareUrl;
+    
+    // Configure WhatsApp URL
+    const waText = encodeURIComponent(`Check out this CA study video: ${activeVideo.title} - ${shareUrl}`);
+    document.getElementById('share-whatsapp').href = `https://api.whatsapp.com/send?text=${waText}`;
+    
+    // Configure Email URL
+    const mailSubject = encodeURIComponent(`CAflix: ${activeVideo.title}`);
+    const mailBody = encodeURIComponent(`Check out this CA study video:\n\n${activeVideo.title}\n${shareUrl}`);
+    document.getElementById('share-email').href = `mailto:?subject=${mailSubject}&body=${mailBody}`;
+    
+    document.getElementById('share-modal').classList.add('active');
+}
+
+function closeShareModal() {
+    document.getElementById('share-modal').classList.remove('active');
+}
+
+function copyShareLink() {
+    const copyText = document.getElementById('share-url-input');
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); // For mobile devices
+    
+    navigator.clipboard.writeText(copyText.value)
+        .then(() => {
+            const btn = document.getElementById('btn-copy-link');
+            const originalText = btn.textContent;
+            btn.textContent = 'Copied!';
+            btn.style.backgroundColor = '#25d366';
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.backgroundColor = 'var(--color-primary-gold)';
+            }, 2000);
+        })
+        .catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+}
+
+// App bootstrapping
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const res = await fetch('/.netlify/functions/videos');
+        if (!res.ok) throw new Error('Failed to load videos endpoint.');
+        
+        globalVideos = await res.json();
+        
+        // Select first video by default on launch
+        if (globalVideos.length > 0) {
+            selectVideo(globalVideos[0]);
+        }
+        
+        // Render full feed
+        renderFeed(globalVideos);
+        
+    } catch (err) {
+        console.error('Error bootstrapping app:', err);
+        // Fallback display message if database is empty
+        const feedContainer = document.getElementById('video-feed');
+        feedContainer.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--color-text-muted);">
+                <h3>Welcome to CAflix!</h3>
+                <p style="margin-top: 0.5rem;">The library database is currently empty. Please access the <a href="admin.html" style="color: var(--color-primary-gold); font-weight: bold;">Admin Panel</a> to configure resources.</p>
+            </div>
+        `;
+    }
     
     // Wire up local search
     const searchInput = document.getElementById('search-input');

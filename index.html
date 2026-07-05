@@ -13,7 +13,7 @@
 <body>
     <header class="app-header">
         <div class="header-container">
-            <h1 class="logo">CA<span>flix</span></h1>
+            <h1 class="logo" onclick="window.location.reload()" style="cursor: pointer;">CA<span>flix</span></h1>
             <p class="tagline">Premium CA Study Library</p>
         </div>
     </header>
@@ -31,7 +31,7 @@
                                 <path d="M8 5.14v14c0 .86.94 1.39 1.66.9l10-7c.61-.43.61-1.37 0-1.8l-10-7a1 1 0 0 0-1.66.9z"/>
                             </svg>
                             <h3>Placeholder Mode</h3>
-                            <p>To watch this video, replace the <code>"PLACEHOLDER"</code> ID in <code>app.js</code> with a real YouTube Video ID.</p>
+                            <p>To watch this video, replace the <code>"PLACEHOLDER"</code> ID with a real YouTube Video ID in the Admin Panel.</p>
                         </div>
                     </div>
                 </div>
@@ -44,9 +44,9 @@
                     <span id="active-video-chapter" class="meta-badge chapter-badge">Chapter</span>
                 </div>
                 
-                <!-- YouTube CTA buttons -->
+                <!-- YouTube CTA & Share buttons -->
                 <div class="engagement-panel">
-                    <p class="cta-label">Support on YouTube:</p>
+                    <p class="cta-label">Actions & Support:</p>
                     <div class="cta-buttons">
                         <a id="cta-like" href="#" target="_blank" class="cta-btn btn-like">
                             <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22l3.02-7.05c.09-.23.14-.47.14-.73v-2z"/></svg>
@@ -60,6 +60,11 @@
                             <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s-2.005-7-11-7S1 12 1 12s2.005 7 11 7 11-7 11-7zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                             Subscribe
                         </a>
+                        <!-- New Share Button -->
+                        <button id="cta-share" class="cta-btn btn-share" onclick="openShareModal()">
+                            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                            Share
+                        </button>
                     </div>
                 </div>
             </div>
@@ -95,8 +100,40 @@
         </section>
     </main>
 
+    <!-- Share Modal Overlay -->
+    <div id="share-modal" class="modal-overlay">
+        <div class="modal-card share-card">
+            <h2>Share Video</h2>
+            <p class="share-subtitle">Copy the link or share directly via WhatsApp or Email.</p>
+            
+            <div class="share-link-container">
+                <input type="text" id="share-url-input" readonly>
+                <button id="btn-copy-link" onclick="copyShareLink()">Copy Link</button>
+            </div>
+            
+            <div class="share-social-grid">
+                <a id="share-whatsapp" href="#" target="_blank" class="share-social-btn whatsapp">
+                    <svg class="social-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.03-5.115-2.91-6.998-1.88-1.882-4.38-2.92-7.016-2.922-5.445 0-9.88 4.417-9.885 9.861-.001 1.77.463 3.5 1.34 5.032l-1.01 3.687 3.777-.99zM16.62 14.86c-.25-.125-1.487-.735-1.718-.817-.23-.084-.4-.125-.567.125-.166.25-.646.817-.79 1-.146.183-.29.208-.54.083-.25-.125-1.062-.39-2.023-1.25-.748-.667-1.253-1.493-1.4-1.74-.146-.25-.015-.383.11-.507.114-.11.25-.29.376-.437.125-.146.166-.25.25-.417.083-.166.04-.312-.02-.437-.06-.125-.568-1.37-.778-1.875-.205-.5-.43-.43-.57-.43-.146-.007-.313-.008-.48-.008-.166 0-.437.062-.667.312-.23.25-.875.854-.875 2.083s.896 2.417.996 2.562c.1.146 1.76 2.695 4.267 3.78.597.26 1.062.414 1.425.53.6.19 1.145.163 1.577.1.48-.07 1.488-.607 1.696-1.164.208-.557.208-1.036.146-1.137-.06-.1-.23-.162-.48-.287z"/>
+                    </svg>
+                    WhatsApp
+                </a>
+                <a id="share-email" href="#" class="share-social-btn email">
+                    <svg class="social-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                    Email
+                </a>
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeShareModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <footer class="app-footer">
-        <p>&copy; 2026 CAflix. Stay focused, work hard, crack the exam.</p>
+        <p>&copy; 2026 CAflix. Stay focused, work hard, crack the exam. <a href="admin.html" style="color: var(--color-primary-gold); text-decoration: none; margin-left: 10px; font-weight: bold;">Admin Panel</a></p>
     </footer>
 
     <script src="app.js"></script>

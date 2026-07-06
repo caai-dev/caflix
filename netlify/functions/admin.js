@@ -93,10 +93,16 @@ exports.handler = async function (event, context) {
             } 
             
             if (event.httpMethod === 'POST') {
-                // Add a source (Channel or Playlist) - Chapter is no longer required
-                const { sourceId, sourceType, paper, title } = bodyData;
-                if (!sourceId || !sourceType || !paper) {
+                // Add a source (Channel or Playlist)
+                const { sourceId, sourceType, paper, title, taggingMode } = bodyData;
+                if (!sourceId || !sourceType) {
                     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing required source fields.' }) };
+                }
+
+                // If fixed mode, paper is required.
+                const isAI = taggingMode === 'ai';
+                if (!isAI && !paper) {
+                    return { statusCode: 400, headers, body: JSON.stringify({ error: 'Paper tag is required for fixed tagging mode.' }) };
                 }
 
                 const res = await fetch(`${supabaseUrl}/rest/v1/caflix_sources`, {
@@ -110,9 +116,10 @@ exports.handler = async function (event, context) {
                     body: JSON.stringify({
                         source_id: sourceId.trim(),
                         source_type: sourceType,
-                        paper,
-                        chapter: null, // Saved with null chapter after simplification
-                        title: title || `${sourceType} Source`
+                        paper: isAI ? 'Pending AI Tag' : paper,
+                        chapter: null,
+                        title: title || `${sourceType} Source`,
+                        tagging_mode: taggingMode || 'fixed'
                     })
                 });
 
@@ -172,7 +179,7 @@ exports.handler = async function (event, context) {
                     }
                     
                     pageCount++;
-                    if (ytData.nextPageToken && pageCount < 100) { // Safety cap of 5000 videos
+                    if (ytData.nextPageToken && pageCount < 100) {
                         pageToken = ytData.nextPageToken;
                     } else {
                         hasNextPage = false;
@@ -190,10 +197,11 @@ exports.handler = async function (event, context) {
                         title: snippet.title || 'Untitled Video',
                         video_id: videoId,
                         paper,
-                        chapter: null, // Saved with null chapter after simplification
+                        chapter: null,
                         description: snippet.description || '',
                         source_type: 'playlist',
-                        source_id: playlistId
+                        source_id: playlistId,
+                        status: 'confirmed' // Default manual uploads to confirmed
                     };
                 }).filter(v => v.video_id);
 
@@ -259,10 +267,11 @@ exports.handler = async function (event, context) {
                         title: finalTitle,
                         video_id: videoId,
                         paper,
-                        chapter: null, // Saved with null chapter after simplification
+                        chapter: null,
                         description: finalDesc,
                         source_type: 'manual',
-                        source_id: null
+                        source_id: null,
+                        status: 'confirmed' // Default manual uploads to confirmed
                     })
                 });
 
@@ -284,7 +293,14 @@ exports.handler = async function (event, context) {
             if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing Video Database ID.' }) };
 
             if (event.httpMethod === 'PATCH') {
-                const { title, paper, description } = bodyData;
+                const { title, paper, description, status } = bodyData;
+                
+                const updatePayload = {};
+                if (title !== undefined) updatePayload.title = title;
+                if (paper !== undefined) updatePayload.paper = paper;
+                if (description !== undefined) updatePayload.description = description;
+                if (status !== undefined) updatePayload.status = status;
+
                 const dbRes = await fetch(`${supabaseUrl}/rest/v1/caflix_videos?id=eq.${id}`, {
                     method: 'PATCH',
                     headers: {
@@ -292,7 +308,7 @@ exports.handler = async function (event, context) {
                         'Authorization': `Bearer ${supabaseKey}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ title, paper, description }) // Excludes chapter
+                    body: JSON.stringify(updatePayload)
                 });
 
                 if (!dbRes.ok) throw new Error(await dbRes.text());
@@ -308,6 +324,17 @@ exports.handler = async function (event, context) {
                 if (!dbRes.ok) throw new Error(await dbRes.text());
                 return { statusCode: 200, headers, body: JSON.stringify({ message: 'Video deleted successfully' }) };
             }
+        }
+
+        // ==========================================
+        // ACTION: GET all videos (Admin version including unconfirmed)
+        // ==========================================
+        if (action === 'all-videos' && event.httpMethod === 'GET') {
+            const res = await fetch(`${supabaseUrl}/rest/v1/caflix_videos?select=*&order=created_at.desc`, {
+                headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+            });
+            const data = await res.json();
+            return { statusCode: 200, headers, body: JSON.stringify(data) };
         }
 
         return { statusCode: 404, headers, body: JSON.stringify({ error: 'Action endpoint not found.' }) };

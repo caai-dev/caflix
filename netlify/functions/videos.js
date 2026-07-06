@@ -34,8 +34,8 @@ exports.handler = async function (event, context) {
     }
 
     try {
-        // Query Supabase REST API directly to avoid dependencies
-        const targetUrl = `${supabaseUrl}/rest/v1/caflix_videos?select=*&order=paper.asc,chapter.asc,created_at.asc`;
+        // Query Supabase REST API directly, filtering status = 'confirmed'
+        const targetUrl = `${supabaseUrl}/rest/v1/caflix_videos?status=eq.confirmed&select=*&order=paper.asc,created_at.asc`;
         const response = await fetch(targetUrl, {
             method: 'GET',
             headers: {

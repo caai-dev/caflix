@@ -136,6 +136,7 @@
         th, td {
             padding: 0.75rem 1rem;
             border-bottom: 1px solid var(--color-border);
+            vertical-align: middle;
         }
         th {
             font-weight: 600;
@@ -163,6 +164,14 @@
         .badge-type.playlist {
             background-color: rgba(59, 130, 246, 0.15);
             color: #3b82f6;
+        }
+        .badge-type.ai-mode {
+            background-color: rgba(139, 92, 246, 0.15);
+            color: #a78bfa;
+        }
+        .badge-type.fixed-mode {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
         }
 
         .btn-danger {
@@ -196,6 +205,24 @@
         .btn-edit:hover {
             background-color: var(--color-primary-gold);
             color: var(--color-bg-main);
+        }
+
+        .btn-confirm {
+            background-color: #22c55e;
+            color: #ffffff;
+            border: 1px solid #22c55e;
+            padding: 0.35rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 0.5rem;
+        }
+        .btn-confirm:hover {
+            background-color: #16a34a;
+            border-color: #16a34a;
+            transform: translateY(-1px);
         }
 
         /* Password Overlay Dialog */
@@ -309,6 +336,22 @@
             from { transform: translateY(100px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
+        
+        .badge-pending {
+            background-color: #d97706;
+            color: #ffffff;
+            font-size: 0.75rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 700;
+            display: inline-block;
+            margin-left: 0.5rem;
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0%, 100% { opacity: 0.85; }
+            50% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -385,11 +428,6 @@
                 <div>
                     <h3 style="font-size: 1.1rem; margin-bottom: 1rem; color: var(--color-text-main);">Add Catcher Source</h3>
                     
-                    <!-- Warning Notice regarding channel back-fill limits & paper updates -->
-                    <div class="helper-note">
-                        <strong>Notice:</strong> This catcher only catches <strong>NEW</strong> uploads from now on. To import older videos, add the channel's playlist under Manual Add.
-                    </div>
-
                     <form id="form-add-source" onsubmit="handleAddSource(event)">
                         <div class="form-group">
                             <label for="source-id">YouTube Channel ID or Playlist ID</label>
@@ -402,7 +440,16 @@
                                 <option value="playlist">YouTube Playlist</option>
                             </select>
                         </div>
+                        
                         <div class="form-group">
+                            <label for="source-tagging-mode">Tagging Mode</label>
+                            <select id="source-tagging-mode" required onchange="toggleTaggingFields()">
+                                <option value="fixed">Fixed Paper (All uploads mapped to same paper)</option>
+                                <option value="ai">Mixed — Let Gemini AI suggest Paper per video</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="source-paper-group">
                             <label for="source-paper">Assign to Paper</label>
                             <select id="source-paper" required>
                                 <option value="Advanced Accounting">Advanced Accounting</option>
@@ -413,6 +460,15 @@
                                 <option value="Financial Management and Strategic Management">Financial Management and Strategic Management</option>
                             </select>
                         </div>
+
+                        <!-- Warning Notice regarding channel back-fill limits & AI Review process -->
+                        <div class="helper-note" id="ai-mode-note" style="display: none; background-color: rgba(139, 92, 246, 0.08); border-left-color: #8b5cf6;">
+                            <strong>AI Mode Notice:</strong> The hourly catcher will scan this source for new uploads and use Gemini AI to suggest a Paper. These videos will save under **Pending Review** and won't appear in the public feed until you confirm them.
+                        </div>
+                        <div class="helper-note" id="fixed-mode-note">
+                            <strong>Fixed Mode Notice:</strong> This catches only **NEW** uploads from now on. To import older videos, add the channel's playlist under Manual Add.
+                        </div>
+
                         <div class="form-group">
                             <label for="source-title">Source Label/Name</label>
                             <input type="text" id="source-title" placeholder="e.g. Educator Channel name" required>
@@ -430,6 +486,7 @@
                                 <tr>
                                     <th>Label</th>
                                     <th>Type</th>
+                                    <th>Mode</th>
                                     <th>Default Paper</th>
                                     <th>Action</th>
                                 </tr>
@@ -447,6 +504,17 @@
         <!-- TAB C: Manage / Edit Videos -->
         <section id="tab-videos" class="admin-section">
             <h2>Videos Manager</h2>
+            
+            <!-- Filters -->
+            <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; background-color: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--color-border);">
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.05em;">View Filter:</span>
+                <button id="btn-filter-all" class="nav-tab active" onclick="setVideoFilter('all')" style="padding: 0.4rem 1rem; font-size: 0.85rem;">All Videos</button>
+                <button id="btn-filter-pending" class="nav-tab" onclick="setVideoFilter('pending')" style="padding: 0.4rem 1rem; font-size: 0.85rem; display: flex; align-items: center;">
+                    Pending AI Review 
+                    <span id="pending-count-badge" style="background-color: #d97706; color: white; border-radius: 20px; font-size: 0.7rem; padding: 0.1rem 0.4rem; margin-left: 0.5rem; font-weight: 800; display: none;">0</span>
+                </button>
+            </div>
+
             <div class="admin-table-container">
                 <table>
                     <thead>
@@ -502,6 +570,7 @@
 
     <script>
         let adminKey = '';
+        let videoFilter = 'all'; // 'all' or 'pending'
 
         // Check local storage for pre-existing key
         window.addEventListener('DOMContentLoaded', () => {
@@ -557,13 +626,46 @@
 
         // Switch Panel Tab views
         function switchTab(tabId) {
-            document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.admin-nav .nav-tab').forEach(btn => btn.classList.remove('active'));
             document.querySelectorAll('.admin-section').forEach(sec => sec.classList.remove('active'));
             
             // Highlight button
             event.target.classList.add('active');
             // Show section
             document.getElementById(tabId).classList.add('active');
+        }
+
+        function toggleTaggingFields() {
+            const mode = document.getElementById('source-tagging-mode').value;
+            const paperGroup = document.getElementById('source-paper-group');
+            const paperSelect = document.getElementById('source-paper');
+            const fixedNote = document.getElementById('fixed-mode-note');
+            const aiNote = document.getElementById('ai-mode-note');
+
+            if (mode === 'ai') {
+                paperGroup.style.display = 'none';
+                paperSelect.required = false;
+                fixedNote.style.display = 'none';
+                aiNote.style.display = 'block';
+            } else {
+                paperGroup.style.display = 'block';
+                paperSelect.required = true;
+                fixedNote.style.display = 'block';
+                aiNote.style.display = 'none';
+            }
+        }
+
+        function setVideoFilter(filterType) {
+            videoFilter = filterType;
+            document.getElementById('btn-filter-all').classList.remove('active');
+            document.getElementById('btn-filter-pending').classList.remove('active');
+
+            if (filterType === 'pending') {
+                document.getElementById('btn-filter-pending').classList.add('active');
+            } else {
+                document.getElementById('btn-filter-all').classList.add('active');
+            }
+            renderVideosList();
         }
 
         // ==========================================
@@ -587,10 +689,23 @@
 
         async function loadVideos() {
             try {
-                // Main feed is public
-                const res = await fetch('/.netlify/functions/videos');
+                // Fetch from the administrative all-videos endpoint (includes unconfirmed)
+                const res = await fetch('/.netlify/functions/admin/all-videos', {
+                    headers: { 'x-admin-key': adminKey }
+                });
                 if (!res.ok) throw new Error(await res.text());
                 globalVideos = await res.json();
+                
+                // Update pending review badge count
+                const pendingCount = globalVideos.filter(v => v.status === 'pending_review').length;
+                const badge = document.getElementById('pending-count-badge');
+                if (pendingCount > 0) {
+                    badge.textContent = pendingCount;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+
                 renderVideosList();
             } catch (err) {
                 showToast('Failed to fetch videos list: ' + err.message, true);
@@ -605,16 +720,18 @@
             body.innerHTML = '';
             
             if (globalSources.length === 0) {
-                body.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--color-text-dark);">No active catcher sources.</td></tr>';
+                body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--color-text-dark);">No active catcher sources.</td></tr>';
                 return;
             }
 
             globalSources.forEach(source => {
+                const isAI = source.tagging_mode === 'ai';
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="font-weight:600;">${source.title || 'Untitled'}</td>
                     <td><span class="badge-type ${source.source_type}">${source.source_type}</span></td>
-                    <td>${source.paper}</td>
+                    <td><span class="badge-type ${isAI ? 'ai-mode' : 'fixed-mode'}">${isAI ? 'AI Tagging' : 'Fixed Paper'}</span></td>
+                    <td>${isAI ? '<em style="color:var(--color-text-dark)">Auto-assigned</em>' : source.paper}</td>
                     <td>
                         <button class="btn-danger" onclick="deleteSource('${source.id}')">Delete</button>
                     </td>
@@ -627,17 +744,44 @@
             const body = document.getElementById('videos-list-body');
             body.innerHTML = '';
 
-            if (globalVideos.length === 0) {
-                body.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--color-text-dark);">No videos in database. Add some first.</td></tr>';
+            let filteredList = globalVideos;
+            if (videoFilter === 'pending') {
+                filteredList = globalVideos.filter(v => v.status === 'pending_review');
+            }
+
+            if (filteredList.length === 0) {
+                body.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--color-text-dark);">No videos match this filter.</td></tr>';
                 return;
             }
 
-            globalVideos.forEach(video => {
+            filteredList.forEach(video => {
+                const isPending = video.status === 'pending_review';
                 const tr = document.createElement('tr');
+                
+                let paperCell = '';
+                if (isPending) {
+                    paperCell = `
+                        <select id="inline-paper-${video.id}" style="padding:0.4rem; font-size:0.85rem; background-color:var(--color-bg-main); border:1px solid var(--color-border); color:#fff; border-radius:4px;">
+                            <option value="Advanced Accounting" ${video.paper === 'Advanced Accounting' ? 'selected' : ''}>Advanced Accounting</option>
+                            <option value="Corporate and Other Laws" ${video.paper === 'Corporate and Other Laws' ? 'selected' : ''}>Corporate and Other Laws</option>
+                            <option value="Taxation" ${video.paper === 'Taxation' ? 'selected' : ''}>Taxation</option>
+                            <option value="Cost and Management Accounting" ${video.paper === 'Cost and Management Accounting' ? 'selected' : ''}>Cost and Management Accounting</option>
+                            <option value="Auditing and Ethics" ${video.paper === 'Auditing and Ethics' ? 'selected' : ''}>Auditing and Ethics</option>
+                            <option value="Financial Management and Strategic Management" ${video.paper === 'Financial Management and Strategic Management' ? 'selected' : ''}>Financial Management and Strategic Management</option>
+                        </select>
+                    `;
+                } else {
+                    paperCell = video.paper;
+                }
+
                 tr.innerHTML = `
-                    <td style="font-weight:500; max-width: 350px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${video.title}</td>
-                    <td>${video.paper}</td>
+                    <td style="font-weight:500; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${video.title}
+                        ${isPending ? '<span class="badge-pending">Pending AI Review</span>' : ''}
+                    </td>
+                    <td>${paperCell}</td>
                     <td>
+                        ${isPending ? `<button class="btn-confirm" onclick="confirmVideoInline('${video.id}')">Confirm</button>` : ''}
                         <button class="btn-edit" onclick="openEditModal('${video.id}')">Edit</button>
                         <button class="btn-danger" onclick="deleteVideo('${video.id}')">Delete</button>
                     </td>
@@ -667,7 +811,7 @@
                         'x-admin-key': adminKey,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ url, paper, title, description }) // Excludes chapter
+                    body: JSON.stringify({ url, paper, title, description })
                 });
 
                 const data = await res.json();
@@ -688,6 +832,7 @@
             event.preventDefault();
             const sourceId = document.getElementById('source-id').value;
             const sourceType = document.getElementById('source-type').value;
+            const taggingMode = document.getElementById('source-tagging-mode').value;
             const paper = document.getElementById('source-paper').value;
             const title = document.getElementById('source-title').value;
 
@@ -702,7 +847,7 @@
                         'x-admin-key': adminKey,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ sourceId, sourceType, paper, title }) // Excludes chapter
+                    body: JSON.stringify({ sourceId, sourceType, taggingMode, paper, title })
                 });
 
                 const data = await res.json();
@@ -710,6 +855,7 @@
 
                 showToast('Catcher source added successfully!');
                 document.getElementById('form-add-source').reset();
+                toggleTaggingFields(); // Reset field visibility
                 loadSources();
             } catch (err) {
                 showToast('Failed to add source: ' + err.message, true);
@@ -719,8 +865,30 @@
             }
         }
 
+        async function confirmVideoInline(id) {
+            const paperSelect = document.getElementById(`inline-paper-${id}`);
+            const paper = paperSelect.value;
+
+            try {
+                const res = await fetch('/.netlify/functions/admin/video', {
+                    method: 'PATCH',
+                    headers: {
+                        'x-admin-key': adminKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id, paper, status: 'confirmed' })
+                });
+
+                if (!res.ok) throw new Error(await res.text());
+                showToast('Video confirmed and published!');
+                loadVideos();
+            } catch (err) {
+                showToast('Failed to confirm video: ' + err.message, true);
+            }
+        }
+
         async function deleteSource(id) {
-            if (!confirm('Are you sure you want to remove this catcher source? The action will not delete videos that were already compiled.')) return;
+            if (!confirm('Are you sure you want to remove this catcher source?')) return;
 
             try {
                 const res = await fetch(`/.netlify/functions/admin/sources?id=${id}`, {
@@ -736,7 +904,7 @@
         }
 
         async function deleteVideo(id) {
-            if (!confirm('Are you sure you want to delete this video from the public library?')) return;
+            if (!confirm('Are you sure you want to delete this video?')) return;
 
             try {
                 const res = await fetch(`/.netlify/functions/admin/video?id=${id}`, {
@@ -777,6 +945,10 @@
             const paper = document.getElementById('edit-video-paper').value;
             const description = document.getElementById('edit-video-desc').value;
 
+            // If the admin manually edits a pending video, we assume they also confirm/verify its paper!
+            const video = globalVideos.find(v => v.id === id);
+            const status = video && video.status === 'pending_review' ? 'confirmed' : undefined;
+
             try {
                 const res = await fetch('/.netlify/functions/admin/video', {
                     method: 'PATCH',
@@ -784,11 +956,11 @@
                         'x-admin-key': adminKey,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ id, title, paper, description }) // Excludes chapter
+                    body: JSON.stringify({ id, title, paper, description, status })
                 });
 
                 if (!res.ok) throw new Error(await res.text());
-                showToast('Video details updated successfully!');
+                showToast('Video details updated!');
                 closeEditModal();
                 loadVideos();
             } catch (err) {

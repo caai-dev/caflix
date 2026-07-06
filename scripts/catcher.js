@@ -77,7 +77,7 @@ async function run() {
                             title: snippet.title || 'Untitled Video',
                             video_id: videoId,
                             paper: source.paper,
-                            chapter: source.chapter,
+                            chapter: null, // Excluded chapter mapping in catcher
                             description: snippet.description || '',
                             source_type: source.source_type,
                             source_id: source.source_id

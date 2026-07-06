@@ -12,9 +12,11 @@ const headers = {
 function extractVideoId(input) {
     if (typeof input !== 'string') return null;
     const cleanInput = input.trim();
+    // 1. Bare valid 11-character video ID check
     if (/^[a-zA-Z0-9_-]{11}$/.test(cleanInput)) {
         return cleanInput;
     }
+    // 2. YouTube URL patterns
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|live\/|shorts\/)([^#\&\?]*).*/;
     const match = cleanInput.match(regExp);
     return (match && match[2].length === 11) ? match[2] : null;
@@ -91,9 +93,9 @@ exports.handler = async function (event, context) {
             } 
             
             if (event.httpMethod === 'POST') {
-                // Add a source (Channel or Playlist)
-                const { sourceId, sourceType, paper, chapter, title } = bodyData;
-                if (!sourceId || !sourceType || !paper || !chapter) {
+                // Add a source (Channel or Playlist) - Chapter is no longer required
+                const { sourceId, sourceType, paper, title } = bodyData;
+                if (!sourceId || !sourceType || !paper) {
                     return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing required source fields.' }) };
                 }
 
@@ -109,7 +111,7 @@ exports.handler = async function (event, context) {
                         source_id: sourceId.trim(),
                         source_type: sourceType,
                         paper,
-                        chapter,
+                        chapter: null, // Saved with null chapter after simplification
                         title: title || `${sourceType} Source`
                     })
                 });
@@ -137,9 +139,9 @@ exports.handler = async function (event, context) {
         // ACTION: POST add-video (Single or Playlist)
         // ==========================================
         if (action === 'add-video' && event.httpMethod === 'POST') {
-            const { url, title, paper, chapter, description } = bodyData;
-            if (!url || !paper || !chapter) {
-                return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing url, paper, or chapter.' }) };
+            const { url, title, paper, description } = bodyData;
+            if (!url || !paper) {
+                return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing url or paper.' }) };
             }
 
             const playlistId = extractPlaylistId(url);
@@ -170,7 +172,7 @@ exports.handler = async function (event, context) {
                     }
                     
                     pageCount++;
-                    if (ytData.nextPageToken && pageCount < 100) { // Safety cap of 5000 videos to prevent infinite loops
+                    if (ytData.nextPageToken && pageCount < 100) { // Safety cap of 5000 videos
                         pageToken = ytData.nextPageToken;
                     } else {
                         hasNextPage = false;
@@ -188,7 +190,7 @@ exports.handler = async function (event, context) {
                         title: snippet.title || 'Untitled Video',
                         video_id: videoId,
                         paper,
-                        chapter,
+                        chapter: null, // Saved with null chapter after simplification
                         description: snippet.description || '',
                         source_type: 'playlist',
                         source_id: playlistId
@@ -257,7 +259,7 @@ exports.handler = async function (event, context) {
                         title: finalTitle,
                         video_id: videoId,
                         paper,
-                        chapter,
+                        chapter: null, // Saved with null chapter after simplification
                         description: finalDesc,
                         source_type: 'manual',
                         source_id: null
@@ -282,7 +284,7 @@ exports.handler = async function (event, context) {
             if (!id) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing Video Database ID.' }) };
 
             if (event.httpMethod === 'PATCH') {
-                const { title, paper, chapter, description } = bodyData;
+                const { title, paper, description } = bodyData;
                 const dbRes = await fetch(`${supabaseUrl}/rest/v1/caflix_videos?id=eq.${id}`, {
                     method: 'PATCH',
                     headers: {
@@ -290,7 +292,7 @@ exports.handler = async function (event, context) {
                         'Authorization': `Bearer ${supabaseKey}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ title, paper, chapter, description })
+                    body: JSON.stringify({ title, paper, description }) // Excludes chapter
                 });
 
                 if (!dbRes.ok) throw new Error(await dbRes.text());

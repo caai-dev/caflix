@@ -41,7 +41,6 @@
                 <h2 id="active-video-title">Select a video to start studying</h2>
                 <div class="video-meta">
                     <span id="active-video-paper" class="meta-badge paper-badge">Paper</span>
-                    <span id="active-video-chapter" class="meta-badge chapter-badge">Chapter</span>
                 </div>
                 
                 <!-- YouTube CTA & Share buttons -->
@@ -60,7 +59,7 @@
                             <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M23 12s-2.005-7-11-7S1 12 1 12s2.005 7 11 7 11-7 11-7zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                             Subscribe
                         </a>
-                        <!-- New Share Button -->
+                        <!-- Share Button -->
                         <button id="cta-share" class="cta-btn btn-share" onclick="openShareModal()">
                             <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
                             Share
@@ -77,13 +76,13 @@
                     <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                     </svg>
-                    <input type="text" id="search-input" placeholder="Search by paper, chapter, or video..." autocomplete="off">
+                    <input type="text" id="search-input" placeholder="Search by paper or video..." autocomplete="off">
                 </div>
             </div>
 
             <!-- Feed content -->
             <div id="video-feed" class="video-feed">
-                <!-- Grouped papers & chapters will be rendered here dynamically -->
+                <!-- Grouped papers will be rendered here dynamically -->
             </div>
 
             <!-- Empty search state -->

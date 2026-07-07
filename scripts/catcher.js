@@ -110,6 +110,9 @@ async function run() {
 
         let newVideosTotal = [];
 
+        let fixedCandidates = [];
+        let aiCandidates = [];
+
         // 3. Query YouTube API for each source
         for (const source of sources) {
             let playlistId = source.source_id;
@@ -144,37 +147,73 @@ async function run() {
                     const videoId = item.contentDetails?.videoId || snippet?.resourceId?.videoId;
                     
                     if (videoId && !existingIds.has(videoId)) {
-                        let finalPaper = source.paper;
-                        let finalStatus = 'confirmed';
+                        existingIds.add(videoId); // Prevent duplicate checks within the same run
 
-                        // If the source is in AI Tagging mode
-                        if (source.tagging_mode === 'ai') {
-                            console.log(`Classifying new video [${snippet.title}] with Gemini API (gemini-3.1-flash-lite)...`);
-                            finalPaper = await classifyVideoWithGemini(snippet.title, snippet.description || '', geminiApiKey);
-                            finalStatus = 'pending_review';
-                            console.log(`Gemini suggested paper: "${finalPaper}" (Status set to: pending_review)`);
-                            
-                            // Rate limit buffer: Sleep for 2 seconds to remain within Gemini's free tier RPM limits
-                            await new Promise(resolve => setTimeout(resolve, 2000));
-                        }
-
-                        newVideosTotal.push({
+                        const candidate = {
+                            videoId,
                             title: snippet.title || 'Untitled Video',
-                            video_id: videoId,
-                            paper: finalPaper,
-                            chapter: null,
                             description: snippet.description || '',
-                            source_type: source.source_type,
-                            source_id: source.source_id,
-                            status: finalStatus
-                        });
+                            publishedAt: snippet.publishedAt || new Date().toISOString(),
+                            source
+                        };
 
-                        existingIds.add(videoId); // Prevent duplicates in the same sync run
+                        if (source.tagging_mode === 'ai') {
+                            aiCandidates.push(candidate);
+                        } else {
+                            fixedCandidates.push(candidate);
+                        }
                     }
                 }
             } catch (err) {
                 console.error(`Failed processing source ${playlistId}:`, err);
             }
+        }
+
+        // Sort AI candidates: oldest first
+        aiCandidates.sort((a, b) => new Date(a.publishedAt) - new Date(b.publishedAt));
+
+        console.log(`Discovered candidates: ${fixedCandidates.length} fixed-mode, ${aiCandidates.length} AI-mode.`);
+
+        // Process Fixed candidates (no cap)
+        for (const candidate of fixedCandidates) {
+            newVideosTotal.push({
+                title: candidate.title,
+                video_id: candidate.videoId,
+                paper: candidate.source.paper,
+                chapter: null,
+                description: candidate.description,
+                source_type: candidate.source.source_type,
+                source_id: candidate.source.source_id,
+                status: 'confirmed'
+            });
+        }
+
+        // Process AI candidates (capped at 15 per run)
+        const aiToProcess = aiCandidates.slice(0, 15);
+        const aiLeftovers = aiCandidates.slice(15);
+
+        if (aiLeftovers.length > 0) {
+            console.log(`Safety cap triggered. Processing first 15 of ${aiCandidates.length} AI-mode videos. Remaining ${aiLeftovers.length} will be parsed in future runs.`);
+        }
+
+        for (const candidate of aiToProcess) {
+            console.log(`Classifying new video [${candidate.title}] with Gemini API (gemini-3.1-flash-lite)...`);
+            const finalPaper = await classifyVideoWithGemini(candidate.title, candidate.description, geminiApiKey);
+            console.log(`Gemini suggested paper: "${finalPaper}" (Status set to: pending_review)`);
+
+            newVideosTotal.push({
+                title: candidate.title,
+                video_id: candidate.videoId,
+                paper: finalPaper,
+                chapter: null,
+                description: candidate.description,
+                source_type: candidate.source.source_type,
+                source_id: candidate.source.source_id,
+                status: 'pending_review'
+            });
+
+            // Rate limit buffer: Sleep for 2 seconds to remain within Gemini's free tier RPM limits
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
         // 4. Bulk insert new videos into database
